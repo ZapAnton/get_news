@@ -1,0 +1,6 @@
+[package]
+name = "get_news"
+version = "0.1.0"
+authors = ["zapolskyNB"]
+
+[dependencies]
