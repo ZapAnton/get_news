@@ -30,10 +30,12 @@ fn get_rss_addresses() -> Result<Vec<String>, std::io::Error> {
     Ok(rss_addrs)
 }
 
-fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
+fn fetch_rss(rss_addr: &str) -> Vec<RssItem> {
+    let rss_xml = reqwest::get(rss_addr).unwrap().text().unwrap();
+
     let mut rss_items: Vec<RssItem> = Vec::new();
 
-    let mut reader = Reader::from_str(rss_xml);
+    let mut reader = Reader::from_str(&rss_xml);
 
     reader.trim_text(true);
 
@@ -118,12 +120,6 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
     }
 
     rss_items
-}
-
-fn fetch_rss(rss_addr: &str) -> Vec<RssItem> {
-    let rss_xml = reqwest::get(rss_addr).unwrap().text().unwrap();
-
-    get_rss_items(&rss_xml)
 }
 
 fn format_description(string: &str, trunc_index: usize, new_line_index: usize) -> String {
