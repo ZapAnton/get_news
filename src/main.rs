@@ -1,7 +1,7 @@
 extern crate quick_xml;
 extern crate reqwest;
 
-use std::{fs::File, io::{BufRead, BufReader}};
+use std::{thread, fs::File, io::{BufRead, BufReader}};
 use quick_xml::{Reader, events::Event};
 
 #[derive(Debug)]
@@ -205,12 +205,18 @@ fn print_news(news: &Vec<RssItem>) {
 fn get_news() {
     let rss_addrs = get_rss_addresses().unwrap();
 
+    let mut threads = Vec::with_capacity(rss_addrs.len());
+
     let mut all_news: Vec<RssItem> = Vec::new();
 
-    for rss_addr in &rss_addrs {
-        let news = fetch_rss(&rss_addr);
+    for rss_addr in rss_addrs {
+        threads.push(thread::spawn(move || -> Vec<RssItem> {
+            fetch_rss(&rss_addr.clone())
+        }));
+    }
 
-        all_news.extend(news);
+    for thread in threads {
+        all_news.extend(thread.join().unwrap());
     }
 
     print_news(&all_news);
