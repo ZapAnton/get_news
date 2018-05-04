@@ -4,6 +4,7 @@ extern crate reqwest;
 use std::{fs::File, io::{BufRead, BufReader}};
 use quick_xml::{Reader, events::Event};
 
+#[derive(Debug)]
 struct RssItem {
     title: String,
 
@@ -30,7 +31,7 @@ fn get_rss_addresses() -> Result<Vec<String>, std::io::Error> {
 }
 
 fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
-    let rss_items: Vec<RssItem> = Vec::new();
+    let mut rss_items: Vec<RssItem> = Vec::new();
 
     let mut reader = Reader::from_str(rss_xml);
 
@@ -38,10 +39,53 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
 
     let mut buffer = Vec::new();
 
+    let mut rss_item = RssItem::new(String::new(), String::new());
+
+    let mut inside_item = false;
+
     loop {
         match reader.read_event(&mut buffer) {
+            Ok(Event::Start(ref tag)) => match tag.name() {
+                b"title" => {
+                    if inside_item {
+                        let mut buf = Vec::new();
+
+                        if let Ok(Event::CData(ref cdata)) = reader.read_event(&mut buf) {
+                            rss_item.title.push_str(&reader.decode(cdata.escaped()));
+                        }
+                    }
+                }
+
+                b"description" => {
+                    if inside_item {
+                        let mut buf = Vec::new();
+
+                        if let Ok(Event::CData(ref cdata)) = reader.read_event(&mut buf) {
+                            rss_item.description.push_str(&reader.decode(cdata.escaped()));
+                        }
+                    }
+                }
+
+                b"item" => inside_item = true,
+
+                _ => (),
+            },
+
+            Ok(Event::End(ref tag)) => match tag.name() {
+                b"item" => {
+                    if inside_item {
+                        rss_items.push(rss_item);
+
+                        rss_item = RssItem::new(String::new(), String::new());
+
+                        inside_item = false;
+                    };
+                }
+
+                _ => (),
+            },
+
             Ok(Event::Eof) => {
-                println!("END");
                 break;
             }
 
@@ -52,14 +96,6 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
             ),
 
             _ => (),
-
-            Ok(Event::Text(ref text)) => {
-                println!("Text: {:?}", text.unescape_and_decode(&reader).unwrap())
-            }
-
-            Ok(Event::Start(ref tag)) => {
-                println!("Tag: {:?}", tag);
-            }
         }
 
         buffer.clear();
@@ -68,17 +104,21 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
     rss_items
 }
 
-fn fetch_news(rss_addr: &str) {
+fn fetch_news(rss_addr: &str) -> Vec<RssItem> {
     let rss_xml = reqwest::get(rss_addr).unwrap().text().unwrap();
 
-    get_rss_items(&rss_xml);
+    get_rss_items(&rss_xml)
 }
 
 fn get_news() {
     let rss_addrs = get_rss_addresses().unwrap();
 
+    let mut all_news: Vec<RssItem> = Vec::new();
+
     for rss_addr in &rss_addrs {
-        fetch_news(&rss_addr);
+        let news = fetch_news(&rss_addr);
+
+        all_news.extend(news);
     }
 }
 
