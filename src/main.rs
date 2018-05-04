@@ -183,7 +183,7 @@ fn format_description(string: &str, trunc_index: usize, new_line_index: usize) -
 fn print_news(news: &Vec<RssItem>) {
     for (i, item) in news.iter().enumerate() {
         let formated_title = format!(
-            "\x1b[96m{}) {}\x1b[0m \x1b[92m[{}]\x1b[0m",
+            "\x1b[96m{})\t{}\x1b[0m\n\t\x1b[92m[{}]\x1b[0m",
             i + 1,
             item.title,
             item.link
