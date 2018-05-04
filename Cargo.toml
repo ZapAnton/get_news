@@ -5,3 +5,4 @@ authors = ["zapolskyNB"]
 
 [dependencies]
 reqwest = "0.8.5"
+quick-xml = "0.12.1"
