@@ -64,7 +64,7 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
                     }
                 }
 
-                b"description" => {
+                b"description" | b"content" => {
                     if inside_item {
                         let mut buf = Vec::new();
 
@@ -82,13 +82,13 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
                     }
                 }
 
-                b"item" => inside_item = true,
+                b"item" | b"entry" => inside_item = true,
 
                 _ => (),
             },
 
             Ok(Event::End(ref tag)) => match tag.name() {
-                b"item" => {
+                b"item" | b"entry" => {
                     if inside_item {
                         rss_items.push(rss_item);
 
