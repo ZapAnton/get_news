@@ -8,12 +8,18 @@ use quick_xml::{Reader, events::Event};
 struct RssItem {
     title: String,
 
+    link: String,
+
     description: String,
 }
 
 impl RssItem {
-    fn new(title: String, description: String) -> Self {
-        RssItem { title, description }
+    fn new(title: String, link: String, description: String) -> Self {
+        RssItem {
+            title,
+            link,
+            description,
+        }
     }
 }
 
@@ -41,7 +47,7 @@ fn fetch_rss(rss_addr: &str) -> Vec<RssItem> {
 
     let mut buffer = Vec::new();
 
-    let mut rss_item = RssItem::new(String::new(), String::new());
+    let mut rss_item = RssItem::new(String::new(), String::new(), String::new());
 
     let mut inside_item = false;
 
@@ -84,7 +90,37 @@ fn fetch_rss(rss_addr: &str) -> Vec<RssItem> {
                     }
                 }
 
+                b"link" => {
+                    let mut buf = Vec::new();
+
+                    if let Ok(Event::Text(ref text)) = reader.read_event(&mut buf) {
+                        rss_item.link.push_str(&reader.decode(text.escaped()));
+                    }
+                }
+
                 b"item" | b"entry" => inside_item = true,
+
+                _ => (),
+            },
+
+            Ok(Event::Empty(ref tag)) => match tag.name() {
+                b"link" => {
+                    if inside_item {
+                        for attr in tag.attributes() {
+                            let attr = attr.unwrap();
+
+                            let key = reader.decode(&attr.key);
+
+                            if key == "href" {
+                                rss_item
+                                    .link
+                                    .push_str(&reader.decode(&attr.unescaped_value().unwrap()));
+
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 _ => (),
             },
@@ -94,7 +130,7 @@ fn fetch_rss(rss_addr: &str) -> Vec<RssItem> {
                     if inside_item {
                         rss_items.push(rss_item);
 
-                        rss_item = RssItem::new(String::new(), String::new());
+                        rss_item = RssItem::new(String::new(), String::new(), String::new());
 
                         inside_item = false;
                     };
@@ -146,7 +182,12 @@ fn format_description(string: &str, trunc_index: usize, new_line_index: usize) -
 
 fn print_news(news: &Vec<RssItem>) {
     for (i, item) in news.iter().enumerate() {
-        let formated_title = format!("\x1b[96m{}) {}\x1b[0m", i + 1, item.title);
+        let formated_title = format!(
+            "\x1b[96m{}) {}\x1b[0m \x1b[92m[{}]\x1b[0m",
+            i + 1,
+            item.title,
+            item.link
+        );
 
         let descr_len = item.description.len();
 
