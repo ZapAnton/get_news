@@ -61,7 +61,9 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
                         let mut buf = Vec::new();
 
                         if let Ok(Event::CData(ref cdata)) = reader.read_event(&mut buf) {
-                            rss_item.description.push_str(&reader.decode(cdata.escaped()));
+                            rss_item
+                                .description
+                                .push_str(&reader.decode(cdata.escaped()));
                         }
                     }
                 }
@@ -104,10 +106,49 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
     rss_items
 }
 
-fn fetch_news(rss_addr: &str) -> Vec<RssItem> {
+fn fetch_rss(rss_addr: &str) -> Vec<RssItem> {
     let rss_xml = reqwest::get(rss_addr).unwrap().text().unwrap();
 
     get_rss_items(&rss_xml)
+}
+
+fn format_description(string: &str, trunc_index: usize, new_line_index: usize) -> String {
+    let mut formated_description = String::new();
+
+    for (idx, chr) in string.chars().enumerate() {
+        if idx == trunc_index {
+            return formated_description;
+        }
+
+        if (idx % new_line_index) == 0 {
+            formated_description.push_str("\n\t")
+        }
+
+        if "\n\t\r".contains(chr) {
+            continue;
+        }
+
+        formated_description.push(chr);
+    }
+
+    formated_description
+}
+
+fn print_news(news: &Vec<RssItem>) {
+    for (i, item) in news.iter().enumerate() {
+        let formated_title = format!("\x1b[96m{}) {}\x1b[0m", i + 1, item.title);
+
+        let descr_len = item.description.len();
+
+        let formated_description = format!(
+            "\x1b[93m{}...\x1b[0m\n",
+            format_description(&item.description, (descr_len * 3 / 10) as usize, 100)
+        );
+
+        println!("{}", formated_title);
+
+        println!("{}", formated_description);
+    }
 }
 
 fn get_news() {
@@ -116,10 +157,12 @@ fn get_news() {
     let mut all_news: Vec<RssItem> = Vec::new();
 
     for rss_addr in &rss_addrs {
-        let news = fetch_news(&rss_addr);
+        let news = fetch_rss(&rss_addr);
 
         all_news.extend(news);
     }
+
+    print_news(&all_news);
 }
 
 fn main() {
