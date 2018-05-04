@@ -50,8 +50,16 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
                     if inside_item {
                         let mut buf = Vec::new();
 
-                        if let Ok(Event::CData(ref cdata)) = reader.read_event(&mut buf) {
-                            rss_item.title.push_str(&reader.decode(cdata.escaped()));
+                        match reader.read_event(&mut buf) {
+                            Ok(Event::CData(ref cdata)) => {
+                                rss_item.title.push_str(&reader.decode(cdata.escaped()))
+                            }
+
+                            Ok(Event::Text(ref text)) => {
+                                rss_item.title.push_str(&reader.decode(text.escaped()))
+                            }
+
+                            _ => (),
                         }
                     }
                 }
@@ -60,10 +68,16 @@ fn get_rss_items(rss_xml: &str) -> Vec<RssItem> {
                     if inside_item {
                         let mut buf = Vec::new();
 
-                        if let Ok(Event::CData(ref cdata)) = reader.read_event(&mut buf) {
-                            rss_item
+                        match reader.read_event(&mut buf) {
+                            Ok(Event::CData(ref cdata)) => rss_item
                                 .description
-                                .push_str(&reader.decode(cdata.escaped()));
+                                .push_str(&reader.decode(cdata.escaped())),
+
+                            Ok(Event::Text(ref text)) => rss_item
+                                .description
+                                .push_str(&reader.decode(text.escaped())),
+
+                            _ => (),
                         }
                     }
                 }
